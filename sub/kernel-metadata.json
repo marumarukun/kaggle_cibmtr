@@ -1,0 +1,21 @@
+{
+  "id": "marumarukun/equity-post-HCT-survival-predictions-sub",
+  "title": "equity-post-HCT-survival-predictions-sub",
+  "code_file": "code.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "false",
+  "enable_tpu": "false",
+  "enable_internet": "false",
+  "dataset_sources": [
+    "marumarukun/equity-post-HCT-survival-predictions-codes"
+  ],
+  "competition_sources": ["equity-post-HCT-survival-predictions"],
+  "kernel_sources": [
+    "marumarukun/equity-post-HCT-survival-predictions-deps"
+  ],
+  "model_sources": [
+    "marumarukun/equity-post-HCT-survival-predictions-artifacts/other/001/1"
+  ]
+}
