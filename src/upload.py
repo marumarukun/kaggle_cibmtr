@@ -39,7 +39,7 @@ if __name__ == "__main__":
                 local_model_dir=OUTPUT_DIR
                 / exp_name
                 / "1",  # output dir に存在する artifact をアップロード
-                update=True,
+                update=False,
             ),
         }
     )
