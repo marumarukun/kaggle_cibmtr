@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import xgboost as xgb
-from lifelines import KaplanMeierFitter
 from scipy.stats import rankdata
 from seed import seed_everything  # edit seed.py as needed
 from tqdm.notebook import tqdm
@@ -90,17 +89,6 @@ test = pl.read_csv(CFG.DATA_PATH / "test.csv", try_parse_dates=True)
 # ====================================================
 # Preprocess(ここに前処理や特徴量エンジニアリングを記述)
 # ====================================================
-def transform_survival_probability(df, time_col="efs_time", event_col="efs"):
-    kmf = KaplanMeierFitter()
-    kmf.fit(df[time_col], df[event_col])
-    y = kmf.survival_function_at_times(df[time_col]).values
-    return y
-
-
-y = transform_survival_probability(train, time_col="efs_time", event_col="efs")
-train = train.with_columns(pl.Series(y).alias("y"))
-
-
 train = train.to_pandas()
 test = test.to_pandas()
 
