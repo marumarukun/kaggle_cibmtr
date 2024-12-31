@@ -30,6 +30,7 @@ IGNORE_PATTERNS = [
     "uv.lock",
     "catboost_info",
     "docker",
+    "compose.yaml",
 ]
 
 
