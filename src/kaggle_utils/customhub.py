@@ -28,6 +28,8 @@ IGNORE_PATTERNS = [
     "scripts",
     "pyproject.toml",
     "uv.lock",
+    "catboost_info",
+    "docker",
 ]
 
 
