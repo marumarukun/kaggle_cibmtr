@@ -23,8 +23,8 @@ KAGGLE_COMPETITION_NAME = os.getenv(
 assert KAGGLE_USERNAME, "KAGGLE_USERNAME is not set."
 
 
-BASE_ARTIFACTS_HANDLE = f"{KAGGLE_USERNAME}/{KAGGLE_COMPETITION_NAME}-artifacts/other"
-CODES_HANDLE = f"{KAGGLE_USERNAME}/{KAGGLE_COMPETITION_NAME}-codes"
+BASE_ARTIFACTS_HANDLE = f"{KAGGLE_USERNAME}/{KAGGLE_COMPETITION_NAME}-artifacts/other".lower()
+CODES_HANDLE = f"{KAGGLE_USERNAME}/{KAGGLE_COMPETITION_NAME}-codes".lower()
 
 if __name__ == "__main__":
     fire.Fire(
@@ -39,7 +39,7 @@ if __name__ == "__main__":
                 local_model_dir=OUTPUT_DIR
                 / exp_name
                 / "1",  # output dir に存在する artifact をアップロード
-                update=False,
+                update=True,
             ),
         }
     )
