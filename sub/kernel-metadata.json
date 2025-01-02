@@ -5,7 +5,7 @@
   "language": "python",
   "kernel_type": "notebook",
   "is_private": "true",
-  "enable_gpu": "false",
+  "enable_gpu": "true",
   "enable_tpu": "false",
   "enable_internet": "false",
   "dataset_sources": [
@@ -16,6 +16,6 @@
     "marumarukun/equity-post-HCT-survival-predictions-deps"
   ],
   "model_sources": [
-    "marumarukun/equity-post-HCT-survival-predictions-artifacts/other/001/1"
+    "marumarukun/equity-post-hct-survival-predictions-artifacts/other/002/1"
   ]
 }
