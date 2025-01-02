@@ -17,57 +17,87 @@ warnings.filterwarnings("ignore")
 # Configurations
 # ====================================================
 class CFG:
-    DYR_RUN = False
+    DRY_RUN = False
     EXP_NAME = config.EXP_NAME
     AUTHOR = "marumarukun"
     COMPETITION = config.KAGGLE_COMPETITION_NAME
     DATA_PATH = config.COMP_DATASET_DIR
     OUTPUT_DIR = config.OUTPUT_DIR
-    MODEL_PATH = config.ARTIFACT_EXP_DIR(config.EXP_NAME) / "models"
-    METHOD_LIST = ["lightgbm", "xgboost", "catboost"]
+    # MODEL_PATH = config.OUTPUT_DIR / "models"  # モデル作成・実験時はこちらを使用
+    MODEL_PATH = config.ARTIFACT_EXP_DIR(config.EXP_NAME) / "models"  # 提出時はこちらを使用
+    METHOD_LIST = ["xgboost_cox", "catboost_cox", "lightgbm", "xgboost", "catboost"]
     SEED = 42
-    n_folds = 2 if DYR_RUN else 10
+    n_folds = 2 if DRY_RUN else 10
     target_col_list = ["y"]
+    cox_target_col_list = ["efs_time2"]
     # group_col = "race_group"  # Required for GroupKFold (edit as needed)
-    # stratified_col = "race_group"  # Required for StratifiedKFold (edit as needed)
-    stratified_cols = ["efs", "race_group"]  # Required for MultilabelStratifiedKFold（edit as needed）
-    num_boost_round = 100 if DYR_RUN else 1000000
-    early_stopping_round = 10 if DYR_RUN else 100
+    stratified_col = "race_group_efs"  # Required for StratifiedKFold (edit as needed)
+    num_boost_round = 100 if DRY_RUN else 1000000
+    early_stopping_round = 10 if DRY_RUN else 500  # 10÷lrで設定
     verbose = 500
 
     # https://lightgbm.readthedocs.io/en/latest/Parameters.html
+    # https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMRegressor.html
+    # https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMClassifier.html
     regression_lgb_params = {
         "objective": "regression",
-        "metric": "mae",
+        # "metric": "mae",
         "learning_rate": 0.02,
-        # "num_leaves": 31,
-        "max_depth": 3,
-        "feature_fraction": 0.8,
+        "max_depth": 5,
+        "min_child_weight": 1,
+        "colsample_bytree": 0.8,
+        "subsample": 0.8,
+        "subsample_freq": 1,
         "seed": SEED,
         "device": "cuda",  # cpu/gpu/cuda
     }
     # https://xgboost.readthedocs.io/en/stable/parameter.html
+    # https://xgboost.readthedocs.io/en/latest/python/python_api.html#xgboost.XGBRegressor
+    # https://xgboost.readthedocs.io/en/latest/python/python_api.html#xgboost.XGBClassifier
     regression_xgb_params = {
         "objective": "reg:squarederror",
-        "eval_metric": "mae",
+        # "eval_metric": "mae",
         "learning_rate": 0.02,
-        "max_depth": 3,
+        "max_depth": 5,
         "colsample_bytree": 0.8,
         "subsample": 0.8,
+        "min_child_weight": 1,
         "enable_categorical": True,
+        "random_state": SEED,
+        "device": "cuda",  # cpu/gpu/cuda
+    }
+    regression_xgb_cox_params = {
+        "objective": "survival:cox",
+        "eval_metric": "cox-nloglik",
+        "learning_rate": 0.02,
+        "max_depth": 3,
+        "colsample_bytree": 0.5,
+        "subsample": 0.8,
         "min_child_weight": 80,
+        "enable_categorical": True,
         "random_state": SEED,
         "device": "cuda",  # cpu/gpu/cuda
     }
     # https://catboost.ai/docs/en/references/training-parameters/
+    # https://catboost.ai/docs/en/concepts/python-reference_catboostregressor
+    # https://catboost.ai/docs/en/concepts/python-reference_catboostclassifier
     regression_cat_params = {
         "loss_function": "RMSE",
         "learning_rate": 0.02,
         "iterations": num_boost_round,
-        # "depth": 7,
+        # "depth": 5,
         "grow_policy": "Lossguide",
         "random_seed": SEED,
         "task_type": "GPU",  # CPU/GPU
+    }
+    regression_cat_cox_params = {
+        "loss_function": "Cox",
+        "learning_rate": 0.02,
+        "iterations": num_boost_round,
+        # "depth": 5,
+        "grow_policy": "Lossguide",
+        "random_seed": SEED,
+        "task_type": "CPU",  # CPU/GPU
     }
 
     model_weight_dict = {"lightgbm": 0.40, "xgboost": 0.30, "catboost": 0.30}
@@ -160,7 +190,8 @@ def xgboost_inference(x_test: pd.DataFrame, target_col: str):
             )
         )
         # Predict
-        pred = model.predict(xgb.DMatrix(x_test, enable_categorical=True))
+        # pred = model.predict(xgb.DMatrix(x_test, enable_categorical=True))
+        pred = model.predict(x_test)
         test_pred += pred
     return test_pred / CFG.n_folds
 
@@ -180,6 +211,37 @@ def catboost_inference(x_test: pd.DataFrame, target_col: str):
     return test_pred / CFG.n_folds
 
 
+# Cox models
+def xgboost_cox_inference(x_test: pd.DataFrame, target_col: str):
+    test_pred = np.zeros(len(x_test))
+    for fold in range(CFG.n_folds):
+        model = pickle.load(
+            open(
+                CFG.MODEL_PATH / f"xgboost_cox_efs_time2_fold{fold + 1}_seed{CFG.SEED}_ver{CFG.EXP_NAME}.pkl",
+                "rb",
+            )
+        )
+        # Predict
+        pred = model.predict(x_test)
+        test_pred += pred
+    return test_pred / CFG.n_folds
+
+
+def catboost_cox_inference(x_test: pd.DataFrame, target_col: str):
+    test_pred = np.zeros(len(x_test))
+    for fold in range(CFG.n_folds):
+        model = pickle.load(
+            open(
+                CFG.MODEL_PATH / f"catboost_cox_efs_time2_fold{fold + 1}_seed{CFG.SEED}_ver{CFG.EXP_NAME}.pkl",
+                "rb",
+            )
+        )
+        # Predict
+        pred = model.predict(x_test)
+        test_pred += pred
+    return test_pred / CFG.n_folds
+
+
 def gradient_boosting_model_inference(method: str, test_df: pd.DataFrame, features: list, target_col: str):
     x_test = test_df[features]
     if method == "lightgbm":
@@ -188,6 +250,11 @@ def gradient_boosting_model_inference(method: str, test_df: pd.DataFrame, featur
         test_pred = xgboost_inference(x_test, target_col)
     if method == "catboost":
         test_pred = catboost_inference(x_test, target_col)
+    # Cox models
+    elif method == "xgboost_cox":
+        test_pred = xgboost_cox_inference(x_test, target_col)
+    elif method == "catboost_cox":
+        test_pred = catboost_cox_inference(x_test, target_col)
     return test_pred
 
 
@@ -210,9 +277,14 @@ output_df = predicting(test, FEATURES)
 pred_lgb = output_df["lightgbm_pred_y"]
 pred_xgb = output_df["xgboost_pred_y"]
 pred_cat = output_df["catboost_pred_y"]
+# Cox models
+pred_cox_xgb = output_df["xgboost_cox_pred_y"]
+pred_cox_cat = output_df["catboost_cox_pred_y"]
 
 submission = pd.read_csv(CFG.DATA_PATH / "sample_submission.csv")
-submission["prediction"] = rankdata(pred_lgb) + rankdata(pred_xgb) + rankdata(pred_cat)
+submission["prediction"] = (
+    rankdata(pred_lgb) + rankdata(pred_xgb) + rankdata(pred_cat) + rankdata(pred_cox_xgb) + rankdata(pred_cox_cat)
+)
 submission.to_csv(CFG.OUTPUT_DIR / "submission.csv", index=False)
 print("Sub shape:", submission.shape)
 submission.head()
