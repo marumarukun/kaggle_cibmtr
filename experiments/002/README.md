@@ -10,6 +10,7 @@
 ### 02_gbdt_add_nelson.ipynb
 - 上記notebookに下記追加
 - 目的変数をNelson-Aalen推定で作成して回帰モデルx3を追加
+- Nelder-Mead法で重みを最適化するコードを追加
 
 ### 03_nn_tensorflow.ipynb
 - chrisのnotebookそのまま
